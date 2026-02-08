@@ -3,6 +3,14 @@
 ## Deskripsi
 Dashboard ini menggunakan data dari sistem penyewaan sepeda untuk menganalisis pengaruh suhu terhadap jumlah pengguna dan variasi jumlah pengguna sepanjang waktu dalam satu hari. Dashboard ini dibangun menggunakan Streamlit.
 
+## Dashboard Interaktif
+
+Dashboard interaktif hasil analisis data Bike Sharing telah dideploy menggunakan Streamlit Cloud dan dapat diakses melalui tautan berikut:
+
+https://submission-d9fqcxeccsztw8wf5xdcva.streamlit.app/
+
+Dashboard ini menyajikan analisis pengaruh suhu, pola penggunaan berdasarkan waktu, serta segmentasi tingkat penggunaan harian secara interaktif.
+
 ## Prerequisites
 Sebelum menjalankan dashboard, pastikan Anda memiliki lingkungan pengembangan yang siap dan telah menginstal semua dependensi. Berikut adalah langkah-langkah yang perlu dilakukan:
 
