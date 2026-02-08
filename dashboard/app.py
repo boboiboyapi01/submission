@@ -3,175 +3,100 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# CONFIG
-st.set_page_config(
-    page_title="Bike Sharing Dashboard",
-    layout="wide"
-)
-
-sns.set_style("whitegrid")
-
-# LOAD DATA
+# Load data
 @st.cache_data
 def load_data():
-    return pd.read_csv("dashboard/main_data.csv")
+    day_df = pd.read_csv('day.csv')
+    hour_df = pd.read_csv('hour.csv')
+    day_df['dteday'] = pd.to_datetime(day_df['dteday'])
+    hour_df['dteday'] = pd.to_datetime(hour_df['dteday'])
+    return day_df, hour_df
 
-df = load_data()
-df["dteday"] = pd.to_datetime(df["dteday"])
+day_df, hour_df = load_data()
 
-# SIDEBAR FILTER
-st.sidebar.header("Filter Data")
+# Sidebar for filters
+st.sidebar.header('Filters')
+season = st.sidebar.selectbox('Select Season', ['All'] + list(day_df['season'].unique()))
+hour_filter = st.sidebar.slider('Select Hour Range', 0, 23, (0, 23))
+demand_filter = st.sidebar.selectbox('Select Demand Cluster', ['All', 'High Demand', 'Medium Demand', 'Low Demand'])
 
-min_date = df["dteday"].min()
-max_date = df["dteday"].max()
+# Filter data
+if season != 'All':
+    day_df = day_df[day_df['season'] == season]
+    hour_df = hour_df[hour_df['season'] == season]
+hour_df = hour_df[(hour_df['hr'] >= hour_filter[0]) & (hour_df['hr'] <= hour_filter[1])]
 
-date_range = st.sidebar.date_input(
-    "Rentang Tanggal",
-    [min_date, max_date],
-    min_value=min_date,
-    max_value=max_date
-)
+# Apply clustering for filtering
+day_df['temp_bin'] = pd.cut(day_df['temp'], bins=3, labels=['Low Temp', 'Med Temp', 'High Temp'])
+day_df['hum_bin'] = pd.cut(day_df['hum'], bins=3, labels=['Low Hum', 'Med Hum', 'High Hum'])
+day_df['wind_bin'] = pd.cut(day_df['windspeed'], bins=3, labels=['Low Wind', 'Med Wind', 'High Wind'])
 
-filtered_df = df[
-    (df["dteday"] >= pd.to_datetime(date_range[0])) &
-    (df["dteday"] <= pd.to_datetime(date_range[1]))
-]
-
-# HEADER
-st.title("🚲 Bike Sharing Dashboard")
-st.markdown(
-    """
-Dashboard ini menyajikan analisis data penyewaan sepeda dengan fokus pada:
-- Pengaruh **suhu**
-- Pola **waktu (jam)**
-- Segmentasi tingkat penggunaan harian
-
-Analisis dilakukan berdasarkan data historis yang tersedia.
-"""
-)
-
-# KPI
-col1, col2, col3 = st.columns(3)
-
-col1.metric("Total Pengguna", int(filtered_df["cnt"].sum()))
-col2.metric("Rata-rata Harian", int(filtered_df["cnt"].mean()))
-col3.metric("Jumlah Hari", filtered_df["dteday"].nunique())
-
-st.divider()
-
-# TEMPERATURE ANALYSIS
-st.subheader("🌡️ Pengaruh Suhu terhadap Jumlah Pengguna")
-
-fig, ax = plt.subplots()
-sns.scatterplot(
-    data=filtered_df,
-    x="temp",
-    y="cnt",
-    alpha=0.6,
-    ax=ax
-)
-
-ax.set_xlabel("Suhu (Normalisasi)")
-ax.set_ylabel("Jumlah Pengguna")
-ax.set_title("Hubungan Suhu dan Jumlah Pengguna")
-
-st.pyplot(fig)
-
-corr = filtered_df["temp"].corr(filtered_df["cnt"])
-
-st.markdown(
-    f"""
-**Insight:**  
-Terdapat hubungan positif antara suhu dan jumlah pengguna
-(**korelasi = {corr:.2f}**).  
-Pada suhu yang lebih hangat, jumlah penyewaan cenderung meningkat.
-"""
-)
-
-st.divider()
-
-# HOURLY USAGE PATTERN
-st.subheader("⏰ Pola Penggunaan Berdasarkan Jam")
-
-hourly_avg = filtered_df.groupby("hr")["cnt"].mean()
-
-fig, ax = plt.subplots(figsize=(10, 4))
-hourly_avg.plot(ax=ax)
-ax.set_xlabel("Jam")
-ax.set_ylabel("Rata-rata Jumlah Pengguna")
-ax.set_title("Rata-rata Penggunaan Sepeda per Jam")
-ax.grid(True)
-
-st.pyplot(fig)
-
-st.markdown(
-    """
-**Insight:**  
-Terlihat dua puncak utama penggunaan pada pagi dan sore hari.
-Hal ini mengindikasikan bahwa sepeda sering digunakan sebagai
-sarana transportasi harian (berangkat dan pulang aktivitas).
-"""
-)
-
-st.divider()
-
-# MANUAL CLUSTERING (NON-ML)
-st.subheader("📊 Segmentasi Tingkat Penggunaan Harian (Clustering Manual)")
-
-daily_usage = (
-    filtered_df
-    .groupby("dteday")["cnt"]
-    .sum()
-    .reset_index()
-)
-
-def usage_category(x):
-    if x < 1000:
-        return "Rendah"
-    elif x < 3000:
-        return "Sedang"
+def demand_cluster(row):
+    if row['temp_bin'] == 'High Temp' and row['hum_bin'] in ['Low Hum', 'Med Hum'] and row['wind_bin'] == 'Low Wind':
+        return 'High Demand'
+    elif row['temp_bin'] == 'Med Temp' and row['wind_bin'] != 'High Wind':
+        return 'Medium Demand'
     else:
-        return "Tinggi"
+        return 'Low Demand'
 
-daily_usage["kategori"] = daily_usage["cnt"].apply(usage_category)
+day_df['demand'] = day_df.apply(demand_cluster, axis=1)
+if demand_filter != 'All':
+    day_df = day_df[day_df['demand'] == demand_filter]
 
-fig, ax = plt.subplots()
-sns.countplot(
-    data=daily_usage,
-    x="kategori",
-    order=["Rendah", "Sedang", "Tinggi"],
-    ax=ax
-)
+# Dashboard Title
+st.title('Bike Sharing Dashboard')
 
-ax.set_xlabel("Kategori Penggunaan")
-ax.set_ylabel("Jumlah Hari")
-ax.set_title("Distribusi Hari Berdasarkan Tingkat Penggunaan")
+# Key Metrics
+st.subheader('Key Metrics')
+col1, col2 = st.columns(2)
+col1.metric('Average Daily Rentals', int(day_df['cnt'].mean()))
+col2.metric('Total Rentals', day_df['cnt'].sum())
 
-st.pyplot(fig)
+# Visualizations
+st.subheader('Hourly Rentals Pattern')
+fig1, ax1 = plt.subplots()
+sns.lineplot(x='hr', y='cnt', data=hour_df, hue='workingday', ci=None, ax=ax1)
+st.pyplot(fig1)
 
-st.markdown(
-    """
-**Insight:**  
-Mayoritas hari berada pada kategori **Sedang**, yang menunjukkan pola penggunaan
-yang relatif stabil. Hari dengan kategori **Tinggi** dapat menjadi fokus
-untuk optimalisasi kapasitas layanan.
-"""
-)
+st.subheader('Rentals by Weekday')
+fig2, ax2 = plt.subplots()
+sns.barplot(x='weekday', y='cnt', data=day_df, ax=ax2)
+st.pyplot(fig2)
 
-st.divider()
+st.subheader('Weather Impact: Rentals vs Temperature')
+fig3, ax3 = plt.subplots()
+sns.scatterplot(x='temp', y='cnt', data=day_df, ax=ax3)
+st.pyplot(fig3)
 
-# CONCLUSION
-st.subheader("📌 Kesimpulan")
+# Demand Cluster
+st.subheader('Demand Clusters (Clustering Manual)')
+cluster_group = day_df.groupby('demand')['cnt'].mean()
+fig4, ax4 = plt.subplots()
+sns.barplot(x=cluster_group.index, y=cluster_group.values, ax=ax4)
+st.pyplot(fig4)
 
-st.markdown(
-    """
-- Suhu memiliki pengaruh terhadap peningkatan jumlah pengguna.
-- Pola waktu menunjukkan penggunaan tinggi pada jam-jam tertentu.
-- Segmentasi manual membantu memahami tingkat intensitas penggunaan harian.
+# RFM Analysis
+st.subheader('RFM Analysis (Adaptasi untuk Hari)')
+day_df = day_df.sort_values('dteday')
+max_date = day_df['dteday'].max()
+day_df['recency'] = (max_date - day_df['dteday']).dt.days
+high_rental_threshold = day_df['cnt'].quantile(0.75)
+day_df['is_high_rental'] = day_df['cnt'] > high_rental_threshold
+rfm_df = day_df.groupby('yr').agg({
+    'recency': 'min',
+    'is_high_rental': 'sum',
+    'cnt': 'sum'
+}).reset_index()
+rfm_df.columns = ['year', 'recency', 'frequency', 'monetary']
+rfm_df['r_score'] = pd.qcut(rfm_df['recency'].rank(method='first'), 4, labels=[4,3,2,1])
+rfm_df['f_score'] = pd.qcut(rfm_df['frequency'].rank(method='first'), 4, labels=[1,2,3,4])
+rfm_df['m_score'] = pd.qcut(rfm_df['monetary'].rank(method='first'), 4, labels=[1,2,3,4])
+rfm_df['rfm_score'] = rfm_df['r_score'].astype(str) + rfm_df['f_score'].astype(str) + rfm_df['m_score'].astype(str)
+st.dataframe(rfm_df)
 
-Dashboard ini mendukung pengambilan keputusan berbasis data
-dalam pengelolaan sistem bike sharing.
-"""
-)
-
-st.caption("Dashboard interaktif ini dibangun menggunakan Streamlit dan dideploy di Streamlit Cloud.")
+# Raw Data View
+if st.checkbox('Show Raw Data'):
+    st.subheader('Day Data')
+    st.dataframe(day_df.head())
+    st.subheader('Hour Data')
+    st.dataframe(hour_df.head())

@@ -1,41 +1,27 @@
-# Dashboard Bike Sharing
+# Dashboard Analisis Bike Sharing
 
 ## Deskripsi
-Dashboard ini menggunakan data dari sistem penyewaan sepeda untuk menganalisis pengaruh suhu terhadap jumlah pengguna dan variasi jumlah pengguna sepanjang waktu dalam satu hari. Dashboard ini dibangun menggunakan Streamlit.
+Dashboard interaktif ini dibuat untuk menganalisis data Bike Sharing Dataset. Dashboard menampilkan:
 
-## Dashboard Interaktif
+- Pola penyewaan sepeda berdasarkan jam dan hari dalam seminggu  
+- Pengaruh faktor cuaca (suhu, kelembaban, kecepatan angin) terhadap jumlah penyewaan  
+- Segmentasi tingkat permintaan (demand clustering) berdasarkan kondisi cuaca  
+- Metrik kunci dan visualisasi yang membantu memahami perilaku pengguna  
 
-Dashboard interaktif hasil analisis data Bike Sharing telah dideploy menggunakan Streamlit Cloud dan dapat diakses melalui tautan berikut:
+Dashboard dibangun menggunakan **Streamlit** dan dapat dijalankan secara lokal atau di-deploy ke Streamlit Cloud.
 
-https://submission-d9fqcxeccsztw8wf5xdcva.streamlit.app/
+## Demo Dashboard (jika sudah di-deploy)
+Jika Anda telah mendeploy ulang dashboard ini ke Streamlit Cloud, tautan biasanya akan berbentuk:  
+`https://submission-d9fqcxeccsztw8wf5xdcva.streamlit.app/`
 
-Dashboard ini menyajikan analisis pengaruh suhu, pola penggunaan berdasarkan waktu, serta segmentasi tingkat penggunaan harian secara interaktif.
+**Catatan**: Tautan lama mungkin sudah tidak aktif. Silakan deploy ulang aplikasi Anda untuk mendapatkan link baru.
 
 ## Prerequisites
-Sebelum menjalankan dashboard, pastikan Anda memiliki lingkungan pengembangan yang siap dan telah menginstal semua dependensi. Berikut adalah langkah-langkah yang perlu dilakukan:
+Pastikan Anda memiliki:
 
-1. **Instalasi Python**: Pastikan Python 3.x sudah terpasang di sistem Anda.
-2. **Instalasi Dependensi**: Anda perlu menginstal semua paket yang diperlukan. Gunakan perintah berikut untuk menginstal paket-paket yang dibutuhkan:
+1. **Python** 3.11 atau 3.12 (direkomendasikan)  
+   → Versi 3.13 juga bisa, tapi 3.11/3.12 paling stabil untuk library data science saat ini.
+
+2. Semua dependensi terinstal. Jalankan perintah berikut di terminal:
    ```bash
    pip install -r requirements.txt
-   ```
-
-## Cara Menjalankan Dashboard
-
-1. **Navigasi ke Folder Dashboard**: Buka terminal atau command prompt, dan navigasikan ke direktori `dashboard` tempat berkas `dashboard.py` berada. Anda dapat melakukannya dengan perintah:
-   ```bash
-   cd path/to/your/submission/dashboard
-   ```
-
-2. **Menjalankan Streamlit**: Setelah berada di dalam folder yang benar, jalankan perintah berikut untuk memulai dashboard:
-   ```bash
-   streamlit run dashboard.py
-   ```
-
-3. **Akses Dashboard**: Setelah menjalankan perintah di atas, buka browser Anda dan kunjungi alamat yang ditunjukkan di terminal (biasanya `http://localhost:8501`) untuk melihat dashboard.
-
-## Struktur Berkas
-- `dashboard.py`: Skrip utama yang berisi kode untuk menjalankan dashboard.
-- `main_data.csv`: Berkas data yang digunakan dalam dashboard.
-- `requirements.txt`: Daftar dependensi yang diperlukan untuk menjalankan dashboard.
-
