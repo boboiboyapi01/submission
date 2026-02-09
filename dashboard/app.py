@@ -2,101 +2,155 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-# Load data
+# Load Data
 @st.cache_data
 def load_data():
-    day_df = pd.read_csv('./data/day.csv')
-    hour_df = pd.read_csv('./data/hour.csv')
-    day_df['dteday'] = pd.to_datetime(day_df['dteday'])
-    hour_df['dteday'] = pd.to_datetime(hour_df['dteday'])
-    return day_df, hour_df
+    try:
+        day_path = './data/day.csv'
+        hour_path = './data/hour.csv'
+        
+        day_df = pd.read_csv(day_path)
+        hour_df = pd.read_csv(hour_path)
+        
+        day_df['dteday'] = pd.to_datetime(day_df['dteday'])
+        hour_df['dteday'] = pd.to_datetime(hour_df['dteday'])
+        
+        return day_df, hour_df
+    except FileNotFoundError as e:
+        st.error(f"File tidak ditemukan: {e}. Pastikan folder 'data' berisi day.csv dan hour.csv.")
+        st.stop()
 
 day_df, hour_df = load_data()
 
-# Sidebar for filters
-st.sidebar.header('Filters')
-season = st.sidebar.selectbox('Select Season', ['All'] + list(day_df['season'].unique()))
-hour_filter = st.sidebar.slider('Select Hour Range', 0, 23, (0, 23))
-demand_filter = st.sidebar.selectbox('Select Demand Cluster', ['All', 'High Demand', 'Medium Demand', 'Low Demand'])
+# Sidebar Filters
+st.sidebar.header("Filters")
+season = st.sidebar.selectbox("Pilih Musim (Season)", ["All"] + list(day_df["season"].unique()))
+hour_range = st.sidebar.slider("Rentang Jam", 0, 23, (0, 23))
+demand_filter = st.sidebar.selectbox("Tingkat Permintaan", ["All", "Permintaan Tinggi", "Permintaan Sedang", "Permintaan Rendah"])
 
-# Filter data
-if season != 'All':
-    day_df = day_df[day_df['season'] == season]
-    hour_df = hour_df[hour_df['season'] == season]
-hour_df = hour_df[(hour_df['hr'] >= hour_filter[0]) & (hour_df['hr'] <= hour_filter[1])]
+# Apply filters
+filtered_day = day_df.copy()
+filtered_hour = hour_df.copy()
 
-# Apply clustering for filtering
-day_df['temp_bin'] = pd.cut(day_df['temp'], bins=3, labels=['Low Temp', 'Med Temp', 'High Temp'])
-day_df['hum_bin'] = pd.cut(day_df['hum'], bins=3, labels=['Low Hum', 'Med Hum', 'High Hum'])
-day_df['wind_bin'] = pd.cut(day_df['windspeed'], bins=3, labels=['Low Wind', 'Med Wind', 'High Wind'])
+if season != "All":
+    filtered_day = filtered_day[filtered_day["season"] == season]
+    filtered_hour = filtered_hour[filtered_hour["season"] == season]
 
-def demand_cluster(row):
-    if row['temp_bin'] == 'High Temp' and row['hum_bin'] in ['Low Hum', 'Med Hum'] and row['wind_bin'] == 'Low Wind':
-        return 'High Demand'
-    elif row['temp_bin'] == 'Med Temp' and row['wind_bin'] != 'High Wind':
-        return 'Medium Demand'
+filtered_hour = filtered_hour[
+    (filtered_hour["hr"] >= hour_range[0]) & (filtered_hour["hr"] <= hour_range[1])
+]
+
+# Clustering Manual (sama seperti notebook)
+filtered_day["temp_bin"] = pd.cut(filtered_day["temp"], bins=3, labels=["Rendah", "Sedang", "Tinggi"])
+filtered_day["hum_bin"] = pd.cut(filtered_day["hum"], bins=3, labels=["Rendah", "Sedang", "Tinggi"])
+filtered_day["wind_bin"] = pd.cut(filtered_day["windspeed"], bins=3, labels=["Rendah", "Sedang", "Tinggi"])
+
+def demand_level(row):
+    if row["temp_bin"] == "Tinggi" and row["hum_bin"] != "Tinggi" and row["wind_bin"] == "Rendah":
+        return "Permintaan Tinggi"
+    elif row["temp_bin"] == "Sedang":
+        return "Permintaan Sedang"
     else:
-        return 'Low Demand'
+        return "Permintaan Rendah"
 
-day_df['demand'] = day_df.apply(demand_cluster, axis=1)
-if demand_filter != 'All':
-    day_df = day_df[day_df['demand'] == demand_filter]
+filtered_day["demand_level"] = filtered_day.apply(demand_level, axis=1)
 
-# Dashboard Title
-st.title('Bike Sharing Dashboard')
+if demand_filter != "All":
+    filtered_day = filtered_day[filtered_day["demand_level"] == demand_filter]
+
+# Dashboard Utama
+st.title("Bike Sharing Dashboard (2011–2012)")
+
+st.markdown("""
+Analisis pola penyewaan sepeda berdasarkan waktu dan faktor cuaca selama periode 2011–2012.  
+Dashboard ini mendukung filtering musim, jam, dan tingkat permintaan.
+""")
 
 # Key Metrics
-st.subheader('Key Metrics')
-col1, col2 = st.columns(2)
-col1.metric('Average Daily Rentals', int(day_df['cnt'].mean()))
-col2.metric('Total Rentals', day_df['cnt'].sum())
+st.subheader("Metrik Utama")
+col1, col2, col3 = st.columns(3)
+col1.metric("Rata-rata Penyewaan Harian", f"{int(filtered_day['cnt'].mean()):,}")
+col2.metric("Total Penyewaan", f"{filtered_day['cnt'].sum():,}")
+col3.metric("Jumlah Hari Tersaring", len(filtered_day))
 
-# Visualizations
-st.subheader('Hourly Rentals Pattern')
-fig1, ax1 = plt.subplots()
-sns.lineplot(x='hr', y='cnt', data=hour_df, hue='workingday', ci=None, ax=ax1)
+# Visual 1: Pola per Jam (Working vs Non-Working)
+st.subheader("Pola Penyewaan per Jam: Hari Kerja vs Akhir Pekan")
+hourly_working = filtered_hour.groupby(["hr", "workingday"])["cnt"].mean().unstack()
+hourly_working = hourly_working.rename(columns={0: "Akhir Pekan", 1: "Hari Kerja"})
+
+fig1, ax1 = plt.subplots(figsize=(10, 5))
+sns.lineplot(data=hourly_working, linewidth=2.5, ax=ax1)
+ax1.set_title("Rata-rata Penyewaan per Jam")
+ax1.set_xlabel("Jam")
+ax1.set_ylabel("Rata-rata Penyewaan")
 st.pyplot(fig1)
 
-st.subheader('Rentals by Weekday')
-fig2, ax2 = plt.subplots()
-sns.barplot(x='weekday', y='cnt', data=day_df, ax=ax2)
+st.info("Insight: Puncak penyewaan di hari kerja terjadi jam 8 pagi (~350–380 unit) dan jam 17–18 sore (~450–500 unit) → pola komuter.")
+
+# Visual 2: Penyewaan per Hari dalam Seminggu
+st.subheader("Rata-rata Penyewaan per Hari dalam Seminggu")
+weekday_map = {0: "Minggu", 1: "Senin", 2: "Selasa", 3: "Rabu", 4: "Kamis", 5: "Jumat", 6: "Sabtu"}
+weekday_avg = filtered_day.groupby("weekday")["cnt"].mean().reset_index()
+weekday_avg["weekday"] = weekday_avg["weekday"].map(weekday_map)
+
+fig2, ax2 = plt.subplots(figsize=(8, 5))
+sns.barplot(x="weekday", y="cnt", data=weekday_avg, ax=ax2, palette="viridis")
+ax2.set_title("Rata-rata Penyewaan per Hari")
+ax2.set_ylabel("Rata-rata Penyewaan")
 st.pyplot(fig2)
 
-st.subheader('Weather Impact: Rentals vs Temperature')
-fig3, ax3 = plt.subplots()
-sns.scatterplot(x='temp', y='cnt', data=day_df, ax=ax3)
+# Visual 3: Pengaruh Suhu
+st.subheader("Pengaruh Suhu terhadap Penyewaan")
+fig3, ax3 = plt.subplots(figsize=(8, 5))
+sns.scatterplot(x="temp", y="cnt", data=filtered_day, alpha=0.6, ax=ax3)
+ax3.set_title("Penyewaan vs Suhu (normalized)")
+ax3.set_xlabel("Suhu (normalized)")
+ax3.set_ylabel("Jumlah Penyewaan")
 st.pyplot(fig3)
 
+st.info("Insight: Suhu memiliki korelasi positif terkuat (~0.63). Penyewaan meningkat signifikan saat suhu >0.6 (sekitar 20–25°C+).")
+
 # Demand Cluster
-st.subheader('Demand Clusters (Clustering Manual)')
-cluster_group = day_df.groupby('demand')['cnt'].mean()
-fig4, ax4 = plt.subplots()
-sns.barplot(x=cluster_group.index, y=cluster_group.values, ax=ax4)
+st.subheader("Tingkat Permintaan (Clustering Manual)")
+cluster_group = filtered_day.groupby("demand_level")["cnt"].mean().reset_index()
+
+fig4, ax4 = plt.subplots(figsize=(7, 5))
+sns.barplot(x="demand_level", y="cnt", data=cluster_group, ax=ax4, palette="Set2")
+ax4.set_title("Rata-rata Penyewaan per Tingkat Permintaan")
+ax4.set_ylabel("Rata-rata Penyewaan")
 st.pyplot(fig4)
 
-# RFM Analysis
-st.subheader('RFM Analysis (Adaptasi untuk Hari)')
-day_df = day_df.sort_values('dteday')
-max_date = day_df['dteday'].max()
-day_df['recency'] = (max_date - day_df['dteday']).dt.days
-high_rental_threshold = day_df['cnt'].quantile(0.75)
-day_df['is_high_rental'] = day_df['cnt'] > high_rental_threshold
-rfm_df = day_df.groupby('yr').agg({
-    'recency': 'min',
-    'is_high_rental': 'sum',
-    'cnt': 'sum'
-}).reset_index()
-rfm_df.columns = ['year', 'recency', 'frequency', 'monetary']
-rfm_df['r_score'] = pd.qcut(rfm_df['recency'].rank(method='first'), 4, labels=[4,3,2,1])
-rfm_df['f_score'] = pd.qcut(rfm_df['frequency'].rank(method='first'), 4, labels=[1,2,3,4])
-rfm_df['m_score'] = pd.qcut(rfm_df['monetary'].rank(method='first'), 4, labels=[1,2,3,4])
-rfm_df['rfm_score'] = rfm_df['r_score'].astype(str) + rfm_df['f_score'].astype(str) + rfm_df['m_score'].astype(str)
-st.dataframe(rfm_df)
+# RFM Adaptasi
+st.subheader("RFM Adaptasi (Segmentasi Tahun Berdasarkan Demand)")
+filtered_day = filtered_day.sort_values("dteday")
+max_date = filtered_day["dteday"].max()
+filtered_day["recency"] = (max_date - filtered_day["dteday"]).dt.days
 
-# Raw Data View
-if st.checkbox('Show Raw Data'):
-    st.subheader('Day Data')
-    st.dataframe(day_df.head())
-    st.subheader('Hour Data')
-    st.dataframe(hour_df.head())
+high_threshold = filtered_day["cnt"].quantile(0.75)
+filtered_day["is_high"] = filtered_day["cnt"] > high_threshold
+
+rfm = filtered_day.groupby("yr").agg({
+    "recency": "min",
+    "is_high": "sum",
+    "cnt": "sum"
+}).reset_index()
+rfm.columns = ["Tahun", "Recency (hari terakhir high)", "Frequency (hari high)", "Monetary (total penyewaan)"]
+
+rfm["r_score"] = pd.qcut(rfm["Recency (hari terakhir high)"].rank(method="first"), 2, labels=[2, 1])
+rfm["f_score"] = pd.qcut(rfm["Frequency (hari high)"].rank(method="first"), 2, labels=[1, 2])
+rfm["m_score"] = pd.qcut(rfm["Monetary (total penyewaan)"].rank(method="first"), 2, labels=[1, 2])
+rfm["RFM Score"] = rfm["r_score"].astype(str) + rfm["f_score"].astype(str) + rfm["m_score"].astype(str)
+
+st.dataframe(rfm.style.highlight_max(color="#d4edda"))
+
+# Raw Data
+if st.checkbox("Tampilkan Data Mentah"):
+    st.subheader("Data Harian (Day)")
+    st.dataframe(filtered_day.head(10))
+    st.subheader("Data Per Jam (Hour)")
+    st.dataframe(filtered_hour.head(10))
+
+st.markdown("---")
+st.caption("Dashboard dibuat untuk proyek Analisis Data Bike Sharing – Dicoding 2026")

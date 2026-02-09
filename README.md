@@ -1,27 +1,53 @@
-# Dashboard Analisis Bike Sharing
+# Proyek Analisis Data: Bike Sharing Dataset
 
 ## Deskripsi
-Dashboard interaktif ini dibuat untuk menganalisis data Bike Sharing Dataset. Dashboard menampilkan:
+Proyek ini bertujuan untuk menganalisis Bike Sharing Dataset (periode 2011–2012) guna memahami pola penyewaan sepeda serta pengaruh faktor cuaca dan waktu.
 
-- Pola penyewaan sepeda berdasarkan jam dan hari dalam seminggu  
-- Pengaruh faktor cuaca (suhu, kelembaban, kecepatan angin) terhadap jumlah penyewaan  
-- Segmentasi tingkat permintaan (demand clustering) berdasarkan kondisi cuaca  
-- Metrik kunci dan visualisasi yang membantu memahami perilaku pengguna  
+Analisis dilakukan menggunakan Jupyter Notebook (notebook.ipynb) dengan tahapan lengkap, meliputi:
+- Data wrangling dan data cleaning
+- Exploratory Data Analysis (EDA)
+- Visualisasi data
+- Analisis lanjutan berupa clustering manual (tanpa menggunakan algoritma machine learning)
+- Insight dan rekomendasi bisnis
 
-Dashboard dibangun menggunakan **Streamlit** dan dapat dijalankan secara lokal atau di-deploy ke Streamlit Cloud.
+Selain itu, proyek ini juga menyediakan dashboard interaktif berbasis Streamlit untuk eksplorasi data secara dinamis.
 
-## Demo Dashboard (jika sudah di-deploy)
-Jika Anda telah mendeploy ulang dashboard ini ke Streamlit Cloud, tautan biasanya akan berbentuk:  
-`https://submission-d9fqcxeccsztw8wf5xdcva.streamlit.app/`
+## Dataset
+Dataset yang digunakan dalam proyek ini terdiri dari:
+- day.csv, yaitu data agregasi penyewaan sepeda harian
+- hour.csv, yaitu data agregasi penyewaan sepeda per jam
 
-**Catatan**: Tautan lama mungkin sudah tidak aktif. Silakan deploy ulang aplikasi Anda untuk mendapatkan link baru.
+Dataset ini digunakan sebagai dasar analisis pada notebook dan dashboard.
+
+## Dashboard Interaktif
+Dashboard interaktif hasil analisis data telah dideploy menggunakan Streamlit Cloud dan dapat diakses melalui tautan berikut:
+
+https://submission-d9fqcxeccsztw8wf5xdcva.streamlit.app/
+
+Catatan: Jika tautan tidak dapat diakses, kemungkinan deployment sebelumnya sudah kedaluwarsa dan aplikasi dapat dideploy ulang melalui Streamlit Cloud.
 
 ## Prerequisites
-Pastikan Anda memiliki:
+Proyek ini membutuhkan:
+- Python versi 3.10 atau lebih baru
+- Library Python sesuai dengan file requirements.txt
 
-1. **Python** 3.11 atau 3.12 (direkomendasikan)  
-   → Versi 3.13 juga bisa, tapi 3.11/3.12 paling stabil untuk library data science saat ini.
+Pastikan seluruh dependensi telah terinstal sebelum menjalankan notebook maupun dashboard.
 
-2. Semua dependensi terinstal. Jalankan perintah berikut di terminal:
-   ```bash
+## Cara Menjalankan Dashboard Secara Lokal
+1. Masuk ke direktori proyek:
+   cd path/to/your/project
+
+2. Instal seluruh dependensi:
    pip install -r requirements.txt
+
+3. Jalankan aplikasi Streamlit:
+   streamlit run app.py
+
+4. Buka browser dan akses alamat lokal yang ditampilkan (umumnya http://localhost:8501).
+
+## Catatan Akhir
+Proyek ini disusun untuk memenuhi kriteria penilaian kelas Analisis Data, dengan fokus pada:
+- Dokumentasi analisis yang jelas
+- Visualisasi data yang efektif
+- Analisis lanjutan non–machine learning
+- Dashboard interaktif yang dapat diakses secara online
